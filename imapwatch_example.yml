@@ -1,0 +1,14 @@
+imap:
+  server: ''
+  username: ''
+  password: '' 
+  monitor: '\Flagged'
+  mailboxes:
+    - 'INBOX'
+
+smtp:
+  server: ''
+  user: ''
+  password: ''
+  to: 'add-to-things-xxxxxxxxxxxxxxxxx@things.email'
+  from: ''
