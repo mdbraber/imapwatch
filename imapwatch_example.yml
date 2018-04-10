@@ -1,14 +1,32 @@
-imap:
-  server: ''
-  username: ''
-  password: '' 
-  monitor: '\Flagged'
-  mailboxes:
-    - 'INBOX'
+accounts:
+  - account: 'fastmail'
+    server: 'imap.provider.com'
+    username: 'john@doe.com'
+    password: ''
+    use_ssl: True
+    timeout: 15
+    mailboxes:
+      - mailbox: 'INBOX'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+Later'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+News'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+TODO'
+        check_for: ['new']
+        action: 'things'
+
+actions:
+  - action: 'things'
+    email: 'add-to-things-xxxxxxx@things.email'
+  - action: 'resend'
+    email: 'invoices@accounting.com'
 
 smtp:
-  server: ''
-  user: ''
+  server: 'smtp.fastmail.com'
+  username: 'john@doe.com'
   password: ''
-  to: 'add-to-things-xxxxxxxxxxxxxxxxx@things.email'
-  from: ''
+  from: 'john@doe.com'

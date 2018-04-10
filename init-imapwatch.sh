@@ -1,6 +1,7 @@
 #! /bin/sh
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
-DAEMON=$HOME/bin/imapwatch/imapwatchd.py
+DAEMON=$HOME/imapwatch/imapwatch.py
+DAEMONOPTS="-d"
 PIDFILE=/tmp/imapwatchd.pid
 
 test -x $DAEMON || exit 0
@@ -27,7 +28,7 @@ case "$1" in
      $0 start
    ;;
   status)
-     status_of_proc -p $PIDFILE $DAEMON imapwatchd && exit 0 || exit $?
+     status_of_proc -p $PIDFILE $DAEMON imapwatch.py && exit 0 || exit $?
    ;;
  *)
    echo "Usage: imapwatchd.sh {start|stop|restart|force-reload|status}"

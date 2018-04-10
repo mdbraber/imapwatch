@@ -33,7 +33,7 @@ class Checker:
         self.server = imapclient.IMAPClient(self.server_address, ssl_context=self.ssl_context, use_uid=False)
         self.server.login(self.username, self.password)
         self.server.select_folder(self.mailbox)
-        self.logger.debug(f"Connected to mailbox {self.mailbox}")
+        self.logger.info(f"Connected to mailbox {self.mailbox}")
 
     def timestamps_difference(self, timestamp):
         delta = timestamp - self.last_sync
@@ -59,7 +59,7 @@ class Checker:
             message_id = envelope.message_id.decode()
             subject = self.decode_header(envelope.subject).strip()
             if envelope.from_[0].name:
-                from_ = envelope.from_[0].name.decode()
+                from_ = self.decode_header(envelope.from_[0].name).strip()
             else:
                 from_ = (envelope.from_[0].mailbox + b'@' +  envelope.from_[0].host).decode()
             items.append({ 
@@ -67,24 +67,30 @@ class Checker:
                 'subject': subject,
                 'message_id': message_id
             })
-            self.logger.debug(f'FOUND: {from_} / {subject} / message:{message_id}')
+            self.logger.info(f'Flagged item: {from_} / {subject}')
 
         return items
 
-    def format_things(self, items):
-        return '\n'.join([ f'\u2709\ufe0f {i["from_"]}: "{i["subject"]}"\nmessage:{quote_plus(i["message_id"])}' for i in items ])
-
     def dispatch(self, items):
         if self.action['action'] == 'things':
-            body = self.format_things(items)
+            body = '\n'.join([ f'\u2709\ufe0f {i["from_"]}: "{i["subject"]}"\nmessage:{quote_plus(i["message_id"])}' for i in items ])
             subject = items[0]['subject']
-            SenderThread('Sender', self.logger, self.sender, self.action['email'], subject, body).start()
-
+       
+        # TODO: create this action
+        elif self.action['action'] == 'resend':
+            body = "Test resend"
+            subject = items[0]['subject']
+        
+        SenderThread('Sender', self.logger, self.sender, self.action['email'], subject, body).start()
+    
     def idle_loop(self):
         self.server.idle()
         while not self.stop_event.is_set():
             try:
                 current_sync = datetime.datetime.now()
+                # timeout defines how long we should wait until we get a response
+                # if we wait a bit longer we can get all the response to an IDLE call
+                # (not just the first one)
                 responses = self.server.idle_check(timeout=10)
                 if isinstance(responses, list) and len(responses) > 0:
                     messages = self.check_messages(responses)
@@ -106,15 +112,17 @@ class Checker:
             except (imapclient.exceptions.IMAPClientError, imapclient.exceptions.IMAPClientAbortError,
                     imaplib.IMAP4.error, imaplib.IMAP4.abort, socket.error, socket.timeout, ssl.SSLError,
                     ssl.SSLEOFError) as exception:
-                self.logger.debug(f"Checker: Got exception @ {self.mailbox}: {exception}")
+                self.logger.critical(f"Checker: Got exception @ {self.mailbox}: {exception}")
+                self.logger.inf(f"Reconnecting...")
                 self.connect()
                 self.idle_loop()
         
         self.server.idle_done()
+        # TODO how should we close the server connection?
+        self.server.logout()
 
     def stop(self):
         self.stop_event.set()
-        self.server.logout()
 
 class CheckerThread(threading.Thread):
     def __init__(self, logger, checker: Checker):

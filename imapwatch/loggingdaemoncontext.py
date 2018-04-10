@@ -20,8 +20,11 @@ class LoggingDaemonContext(daemon.DaemonContext):
         stdout_logger = None,  # new
         stderr_logger = None,  # new
         #stdin,   omitted!
+        stdin = None,
         #stdout,  omitted!
+        stdout = None,
         #sterr,   omitted!
+        stderr = None,
         signal_map=None,
         ):
 
@@ -43,9 +46,12 @@ class LoggingDaemonContext(daemon.DaemonContext):
             detach_process = detach_process,
             files_preserve = files_preserve, 
             pidfile = pidfile,
-            stdin = devnull_in,
-            stdout = devnull_out,
-            stderr = devnull_out,
+            #stdin = devnull_in,
+            #stdout = devnull_out,
+            #stderr = devnull_out,
+            stdin = sys.stdin,
+            stdout = sys.stdout,
+            stderr = sys.stderr,
             signal_map = signal_map) 
 
     def _openFilesFromLoggers(self, loggers):
@@ -54,9 +60,11 @@ class LoggingDaemonContext(daemon.DaemonContext):
         for logger in loggers:
             for handler in logger.handlers:
                 if hasattr(handler, 'stream') and hasattr(handler.stream, 'fileno'):
-                    #if handler.stream.fileno() not in openFiles:
-                    #    openFiles.append(handler.stream.fileno())
-                    openFiles.append(handler.stream.fileno())
+                    if handler.stream.fileno() not in openFiles:
+                        openFiles.append(handler.stream.fileno())
+                if hasattr(handler, 'socket') and hasattr(handler.socket, 'fileno'):
+                    if handler.socket.fileno() not in openFiles:
+                        openFiles.append(handler.socket.fileno())
         return openFiles
 
     def _addLoggerFiles(self):
@@ -70,7 +78,6 @@ class LoggingDaemonContext(daemon.DaemonContext):
     def open(self): 
         self._addLoggerFiles() 
         super().open()
-        daemon.DaemonContext.open(self)
         if self.stdout_logger:
             fileLikeObj = FileLikeLogger(self.stdout_logger)
             sys.stdout = fileLikeObj
