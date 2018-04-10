@@ -37,6 +37,10 @@ optional arguments:
 
 Example configuration in [YAML syntax](http://pyyaml.org/wiki/PyYAMLDocumentation) (also included as `imapwatch_example.yml`). No passwords supplied, but you should use your own anyway :-) Actions are examples and you could/should build your own (`things` is included as an example and exists in the current code). 
 
+You can (for now) use multiple accounts, multiple actions and a single SMTP server. Take good care
+of writing good YAML syntax (check for when to use `-` as delineator for blocks) and use `['']` with
+the `check_for` item.
+
 ```
 accounts:
   - account: 'fastmail'
