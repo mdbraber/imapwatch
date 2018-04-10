@@ -46,7 +46,7 @@ To use this configuration file, rename to `imapwatch.yml` (or specify a differen
 
 ```
 accounts:
-  - account: 'fastmail'
+  - account: 'provider'
     server: 'imap.provider.com'
     username: 'john@doe.com'
     password: ''
@@ -71,7 +71,7 @@ actions:
     email: 'add-to-things-xxxxxxx@things.email'
 
 smtp:
-  server: 'smtp.fastmail.com'
+  server: 'smtp.provider.com'
   username: 'john@doe.com'
   password: ''
   from: 'john@doe.com'
