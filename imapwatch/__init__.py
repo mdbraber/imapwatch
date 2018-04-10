@@ -1,6 +1,6 @@
+#!/usr/bin/env python3.6
 __all__ = ["checker", "sender", "filelikelogger","loggingdaemoncontext"]
 
-#!/usr/bin/env python3.6
 import time
 import logging
 import yaml
@@ -95,6 +95,7 @@ class IMAPWatch:
         except Exception as e:
             try:
                 # start anyway, even if another process is running
+                # TODO this not work - we should do something else to surpass not starting...
                 if self.force:
                     pass
                 else:
