@@ -33,6 +33,45 @@ optional arguments:
                         Loglevel for the console logger - default: INFO
 ```
 
+## Configuration (example)
+
+Example configuration (also included as `imapwatch_example.yml`). No passwords supplied, but you
+should use your own anyway :-) Actions are examples and you could/should build your own (`things` is
+included as an example and exists in the current code. 
+
+```
+accounts:
+  - account: 'fastmail'
+    server: 'imap.provider.com'
+    username: 'john@doe.com'
+    password: ''
+    use_ssl: True
+    timeout: 15
+    mailboxes:
+      - mailbox: 'INBOX'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+Later'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+News'
+        check_for: ['flagged']
+        action: 'things'
+      - mailbox: '+TODO'
+        check_for: ['new']
+        action: 'things'
+
+actions:
+  - action: 'things'
+    email: 'add-to-things-xxxxxxx@things.email'
+
+smtp:
+  server: 'smtp.fastmail.com'
+  username: 'john@doe.com'
+  password: ''
+  from: 'john@doe.com'
+```
+
 ## Want to help?
 
 Feel free to file an issue or create a pull request!
