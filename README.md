@@ -42,7 +42,7 @@ of writing good YAML syntax (check for when to use `-` as delineator for blocks)
 the `check_for` item.
 
 To use this configuration file, rename to `imapwatch.yml` (or specify a different file using the
-`-c` / `--configfile` paramter.
+`-c` / `--configfile` parameter).
 
 ```
 accounts:
