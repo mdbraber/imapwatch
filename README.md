@@ -48,8 +48,8 @@ To use this configuration file, rename to `imapwatch.yml` (or specify a differen
 accounts:
   - account: 'provider'
     server: 'imap.provider.com'
-    username: 'john@doe.com'
-    password: ''
+    username: 'john@provider.com'
+    password: 'mysecretpass'
     use_ssl: True
     timeout: 15
     mailboxes:
@@ -72,9 +72,9 @@ actions:
 
 smtp:
   server: 'smtp.provider.com'
-  username: 'john@doe.com'
-  password: ''
-  from: 'john@doe.com'
+  username: 'john@provider.com'
+  password: 'mysecretpass'
+  from: 'john@provider.com'
 ```
 
 ## Want to help?
