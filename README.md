@@ -35,7 +35,7 @@ optional arguments:
 
 ## Configuration (example)
 
-Example configuration in [YAML syntax](http://pyyaml.org/wiki/PyYAMLDocumentation) (also included as `imapwatch_example.yml`). No passwords supplied, but you should use your own anyway :-) Actions are examples and you could/should build your own (`things` is included as an example and exists in the current code). 
+Example configuration in [YAML syntax](http://pyyaml.org/wiki/PyYAMLDocumentation) (also included as `imapwatch_example.yml`). Actions are examples and you could/should build your own (`things` is included as an example and exists in the current code). Check [imapwatch/checker.py](blob/master/imapwatch/checker.py) for the relevant code (see the `dispatch` function). 
 
 You can (for now) use multiple accounts, multiple actions and a single SMTP server. Take good care
 of writing good YAML syntax (check for when to use `-` as delineator for blocks) and use `['']` with
