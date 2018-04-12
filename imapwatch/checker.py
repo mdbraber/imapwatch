@@ -49,8 +49,19 @@ class Checker:
 
     def decode_header(self, header):
         h = email.header.decode_header(header.decode())
-        elements = [ i[0].decode(i[1]) if i[1] else i[0] for i in h ]
-        return ' '.join(elements)
+        self.logger.debug(f"h: {h}")
+        #elements = [ i[0].decode(i[1]) if i[1] else i[0] for i in h ]
+        elements = []
+        for i in h:
+            if i[1]:
+                elements.append(i[0].decode(i[1]))
+            else:
+                try:
+                    elements.append(i[0].decode())
+                except AttributeError:
+                    elements.append(i[0])
+        # TODO should we join with a space or no space?
+        return ''.join(elements)
 
     def fetch_messages(self, messages):
         items = []

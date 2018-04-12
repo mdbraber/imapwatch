@@ -152,6 +152,8 @@ class IMAPWatch:
             self.logger.setLevel(self.verbose)
             
             self.logger.addHandler(consoleHandler)
+            self.stdout_logger.addHandler(consoleHandler)
+            self.stderr_logger.addHandler(consoleHandler)
             
             # TODO add custom level for imapclient logging on the console
             # or in the configfile?

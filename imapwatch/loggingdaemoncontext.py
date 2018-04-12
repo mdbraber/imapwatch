@@ -78,9 +78,9 @@ class LoggingDaemonContext(daemon.DaemonContext):
     def open(self): 
         self._addLoggerFiles() 
         super().open()
-        #if self.stdout_logger:
-        #    fileLikeObj = FileLikeLogger(self.stdout_logger)
-        #    sys.stdout = fileLikeObj
-        #if self.stderr_logger:
-        #    fileLikeObj = FileLikeLogger(self.stderr_logger)
-        #    sys.stderr = fileLikeObj
+        if self.stdout_logger:
+            fileLikeObj = FileLikeLogger(self.stdout_logger)
+            sys.stdout = fileLikeObj
+        if self.stderr_logger:
+            fileLikeObj = FileLikeLogger(self.stderr_logger)
+            sys.stderr = fileLikeObj
