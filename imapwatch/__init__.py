@@ -19,7 +19,7 @@ from .loggingdaemoncontext import LoggingDaemonContext
 
 class IMAPWatch:
 
-    def __init__(self, basedir = None, configfile = 'imapwatch.yml', pidfile = '/tmp/imapwatch.pid', logfile = 'log/imapwatch.log', daemon = False, loglevel = None, force = False):
+    def __init__(self, basedir = None, configfile = 'imapwatch.yml', pidfile = '/tmp/imapwatch.pid', logfile = 'log/imapwatch.log', daemon = False, verbose = None, force = False):
         
         if basedir:
             # basedir must be a full, absolute path
@@ -36,16 +36,16 @@ class IMAPWatch:
         self.pidfile = TimeoutPIDLockFile(pidfile,timeout=1)
         self.logfile = os.path.join(__location__, logfile)
         self.daemon = daemon
-        self.loglevel = loglevel
+        self.verbose = verbose
         self.force = force
 
         self.stop_event = threading.Event()
         self.threads = []
 
-        self.setup_logging()
-
     def start(self):
 
+        self.setup_logging()
+        
         context = LoggingDaemonContext()
         context.loggers_preserve = [ self.logger ]
         context.stdout_logger = self.stdout_logger
@@ -111,7 +111,7 @@ class IMAPWatch:
     def setup_logging(self):
 
         # configure logging
-        logFormatter = logging.Formatter('%(asctime)s %(name)-10.10s [%(process)-5.5]] [%(levelname)-8.8s] [%(threadName)-11.11s] %(message)s')
+        logFormatter = logging.Formatter('%(asctime)s %(name)-10.10s [%(process)-5.5d] [%(levelname)-8.8s] [%(threadName)-11.11s] %(message)s')
         self.logger = logging.getLogger('imapwatch')
         # this shouldn't be necessary? level should be NOTSET standard
         # https://docs.python.org/3/library/logging.html
@@ -149,7 +149,7 @@ class IMAPWatch:
             consoleHandler.formatter = logFormatter
 
             consoleHandler.setLevel('DEBUG')
-            self.logger.setLevel(self.loglevel)
+            self.logger.setLevel(self.verbose)
             
             self.logger.addHandler(consoleHandler)
             
@@ -164,10 +164,10 @@ class IMAPWatch:
         # https://docs.python.org/3/library/threading.html
         for t in self.threads:
             # TODO check what's taking so long when we stop this process?
-            logger.debug(f'Calling stop() for thread {t.name}')
+            self.logger.debug(f'Calling stop() for thread {t.name}')
             t.stop()
-            logger.debug(f'Finished stop() for thread {t.name}')
-            logger.debug(f'Calling join() for thread {t.name}')
+            self.logger.debug(f'Finisihed stop() for thread {t.name}')
+            self.logger.debug(f'Calling join() for thread {t.name}')
             t.join()
-            logger.debug(f'Finshed join() for thread {t.name}') 
+            self.logger.debug(f'Finshed join() for thread {t.name}') 
         self.logger.info('Stopped')

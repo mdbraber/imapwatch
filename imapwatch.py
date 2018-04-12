@@ -59,7 +59,7 @@ if __name__ == "__main__":
                         action='store', dest='pidfile',
                         default='/tmp/imapwatch.pid',
                         help='Path to PID file, needs full path! - default: /tmp/imapwatch.pid')
-    parser.add_argument('-v', '--loglevel',
+    parser.add_argument('-v', '--verbose',
                         action='store', dest='loglevel',
                         choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
                         default='INFO',
