@@ -25,8 +25,8 @@ class IMAPWatch:
             # basedir must be a full, absolute path
             __location__ = os.path.realpath(os.path.join(basedir))
         else:
-            # assume the configfile and log are in the parent directory of the directory of this file
-            __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), os.pardir))
+            # assume the configfile and log are in the parent-parent directory of the directory of this file
+            __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), os.pardir, os.pardir))
         
         configfile = os.path.join(__location__, configfile)
         self.config = yaml.load(open(configfile,'r'))

@@ -10,7 +10,7 @@ import imapclient.exceptions
 import email
 from email.header import decode_header
 from urllib.parse import quote_plus
-from imapwatch.sender import Sender, SenderThread
+from .sender import Sender, SenderThread
 
 class Checker:
     def __init__(self, logger, stop_event, server_address: str, username, password, mailbox, check_for, action, sender, use_ssl=True, timeout=10):
@@ -102,7 +102,11 @@ class Checker:
                 # timeout defines how long we should wait until we get a response
                 # if we wait a bit longer we can get all the response to an IDLE call
                 # (not just the first one)
-                responses = self.server.idle_check(timeout=10)
+                #
+                # also: when stopping a thread, it waits until this loop has finished.
+                # we can set this smaller to quit quicker, but not too small (as we won't have
+                # enought time to catch multiple messages
+                responses = self.server.idle_check(timeout=3)
                 if isinstance(responses, list) and len(responses) > 0:
                     messages = self.check_messages(responses)
                     if messages:
