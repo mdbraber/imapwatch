@@ -128,7 +128,7 @@ class Checker:
                     imaplib.IMAP4.error, imaplib.IMAP4.abort, socket.error, socket.timeout, ssl.SSLError,
                     ssl.SSLEOFError) as exception:
                 self.logger.critical(f"Checker: Got exception @ {self.mailbox}: {exception}")
-                self.logger.inf(f"Reconnecting...")
+                self.logger.info(f"Reconnecting...")
                 self.connect()
                 self.idle_loop()
         
