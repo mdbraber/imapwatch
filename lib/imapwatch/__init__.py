@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.6
 __all__ = ["checker", "sender", "filelikelogger","loggingdaemoncontext"]
 
 import time
@@ -11,7 +10,7 @@ import os
 import signal
 from logging.handlers import RotatingFileHandler
 from daemon.pidfile import TimeoutPIDLockFile
-from lockfile import AlreadyLocked, LockTimeout
+from lockfile import AlreadyLocked, LockTimeout, NotLocked
 from .sender import Sender
 from .checker import Checker, CheckerThread
 from .loggingdaemoncontext import LoggingDaemonContext
@@ -26,7 +25,7 @@ class IMAPWatch:
             __location__ = os.path.realpath(os.path.join(basedir))
         else:
             # assume the configfile and log are in the parent-parent directory of the directory of this file
-            __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), os.pardir, os.pardir))
+            __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir))
         
         configfile = os.path.join(__location__, configfile)
         self.config = yaml.load(open(configfile,'r'))
@@ -45,7 +44,7 @@ class IMAPWatch:
     def start(self):
 
         self.setup_logging()
-        
+
         context = LoggingDaemonContext()
         context.loggers_preserve = [ self.logger ]
         context.stdout_logger = self.stdout_logger
@@ -64,14 +63,12 @@ class IMAPWatch:
             context.stdout = sys.stdout
             context.stdin = sys.stdin
 
+        # TODO first acquire and then release so we can go back to the command line
+        # then do the same in the DaemonContext
         try:
-            # TODO first acquire and then release so we can go back to the command line
-            # then do the same in the DaemonContext
-            self.pidfile.acquire()
-            self.pidfile.release()
             with context as c:
                 self.logger.info('---------------')
-                self.logger.info('Starting daemon')
+                self.logger.info(f'Starting daemon with pid {self.pidfile.read_pid()}')
                 sender = Sender(self.logger, self.config['smtp']['server'], self.config['smtp']['username'], self.config['smtp']['password'], self.config['smtp']['from'])
 
                 self.logger.info("Setting up mailboxes")
@@ -84,34 +81,27 @@ class IMAPWatch:
                         self.threads.append(checker_thread)
                         checker_thread.start()
                 
-                # we have to do this, otherwise we use the context and lockfile
+                # we have to do this, otherwise we lose the context and lockfile
                 # (after all the threads have been created and detached)
                 while not self.stop_event.is_set():
                     time.sleep(1)
-
-
-        #except (AlreadyLocked, LockTimeout) as e:
-        # TODO specify Exceptions caught
-        except Exception as e:
-            try:
-                # start anyway, even if another process is running
-                # TODO this not work - we should do something else to surpass not starting...
-                if self.force:
-                    pass
-                else:
-                    # killing with signal 0 so we can see if the process exists (and might thrown an OSError)
-                    pid = self.pidfile.read_pid()
-                    os.kill(pid, 0)
-                    # if it doesn't throw an OSError it means another process is running, so raise an SystemExit
-                    raise SystemExit(f'Another imapwatch is already running with pid: {pid}')
-            except OSError:  #No process with locked PID
-                print(f'Cleaning up stale pidfile')
-                self.pidfile.break_lock()  
-
+        except FileExistsError:
+            self.logger.debug('Removed stale lock file')
+            self.pidfile.break_lock()
+        except AlreadyLocked:
+            if not self.force:
+                raise SystemExit('Another imapwatch process already running')
+            pass
+        except LockTimeout:
+            raise SystemExit('LockTimeout')
+        except NotLocked:
+            raise SystemExit('NotLocked')
+            pass
+                
     def setup_logging(self):
 
         # configure logging
-        logFormatter = logging.Formatter('%(asctime)s %(name)-10.10s [%(process)-5.5d] [%(levelname)-8.8s] [%(threadName)-11.11s] %(message)s')
+        logFormatter = logging.Formatter('%(asctime)s %(name)-10.10s [%(process)-5d] [%(levelname)-8.8s] [%(threadName)-11.11s] %(message)s')
         self.logger = logging.getLogger('imapwatch')
         # this shouldn't be necessary? level should be NOTSET standard
         # https://docs.python.org/3/library/logging.html
@@ -142,12 +132,12 @@ class IMAPWatch:
         self.stderr_logger = logging.getLogger('stderr')
         self.stderr_logger.setLevel(logging.DEBUG)
         self.stderr_logger.addHandler(self.fileHandler)
-        
+       
+        consoleHandler = logging.StreamHandler()
+        consoleHandler.formatter = logFormatter
+
         if not self.daemon:
             # Add optional ConsoleHandler
-            consoleHandler = logging.StreamHandler()
-            consoleHandler.formatter = logFormatter
-
             consoleHandler.setLevel('DEBUG')
             self.logger.setLevel(self.verbose)
             
@@ -158,18 +148,17 @@ class IMAPWatch:
             # TODO add custom level for imapclient logging on the console
             # or in the configfile?
             self.imapclient_logger.addHandler(consoleHandler)
-
+ 
     def stop(self, signum, frame):
         self.logger.debug('Stopping')
         self.stop_event.set()
         # TODO should we use threading.enumerate() to stop threads?
         # https://docs.python.org/3/library/threading.html
         for t in self.threads:
-            # TODO check what's taking so long when we stop this process?
-            self.logger.debug(f'Calling stop() for thread {t.name}')
+            #self.logger.debug(f'Calling stop() for thread {t.name}')
             t.stop()
-            self.logger.debug(f'Finisihed stop() for thread {t.name}')
-            self.logger.debug(f'Calling join() for thread {t.name}')
+            #self.logger.debug(f'Finished stop() for thread {t.name}')
+            #self.logger.debug(f'Calling join() for thread {t.name}')
             t.join()
-            self.logger.debug(f'Finshed join() for thread {t.name}') 
+            #self.logger.debug(f'Finshed join() for thread {t.name}') 
         self.logger.info('Stopped')

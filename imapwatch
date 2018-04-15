@@ -1,7 +1,12 @@
-#!/usr/bin/env python3.6
+#!/usr/local/bin/python3.6
+# why this hashbang: https://www.linuxquestions.org/questions/programming-9/pidof-x-python-script-not-always-working-4175492559/
 import signal
 import os
 import time
+import sys
+import subprocess
+from lockfile import AlreadyLocked, LockTimeout, NotLocked
+from subprocess import CalledProcessError
 from argparse import ArgumentParser
 from lib.imapwatch import IMAPWatch
 from daemon.pidfile import TimeoutPIDLockFile
@@ -9,9 +14,55 @@ from daemon.pidfile import TimeoutPIDLockFile
 if __name__ == "__main__":
 
     def start(args):
-        imapwatch = IMAPWatch(args.basedir, args.configfile, args.pidfile, args.logfile, args.daemon, args.loglevel, args.force)
-        imapwatch.start()
-        
+
+        try:
+            pidfile = TimeoutPIDLockFile(args.pidfile,timeout=1)
+            pid = pidfile.read_pid()
+            if pid:
+                os.kill(pid, 0)
+                raise SystemExit(f'imapwatch already running with pid {pid}')
+            # check if we can expect any Exceptions when trying to lock with this file
+            pidfile.acquire()
+        except LockTimeout as e:
+            if pidfile and not pid:
+                pidfile.break_lock()
+        except OSError:
+            pidfile.break_lock()
+        except PermissionError:
+            # seems to be not our process
+            raise SystemExit(e)
+        except (AlreadyLocked, NotLocked) as e:
+            if not args.force:
+                raise SystemExit(e)
+        finally:
+            pidfile.release()
+
+        if(not args.daemon or ("imapwatch_context" in os.environ and os.environ["imapwatch_context"] == "subprocess")):
+            imapwatch = IMAPWatch(args.basedir, args.configfile, args.pidfile, args.logfile, args.daemon, args.loglevel, args.force)
+            imapwatch.start()
+        else:
+            try:
+                print(f'Starting imapwatch -- check {os.path.join(__location__,args.logfile)} for logging')
+                imapwatch_env = os.environ.copy()
+                imapwatch_env["imapwatch_context"] = "subprocess"
+                #imapwatch = subprocess.run(sys.argv,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=imapwatch_env)
+                imapwatch = subprocess.run(sys.argv,env=imapwatch_env)
+
+                if(args.daemon):
+                    for n in range(5):
+                        if pidfile.is_locked():
+                            pid = pidfile.read_pid()
+                            break
+                        time.sleep(1)
+
+                    if pid:
+                        print(f"imapwatch started with pid {pid}")
+                    else:
+                        print(f"imapwatch failed to start (return code: {imapwatch.returncode}")
+
+            except CalledProcessError as e:
+                print(f"imapwatch failed to start: {e}")
+                    
     def stop(args):
         try:
             pidfile = TimeoutPIDLockFile(args.pidfile,timeout=1)
@@ -22,15 +73,21 @@ if __name__ == "__main__":
                 os.kill(pid, signal.SIGKILL)
                 print(f"Killed imapwatch process with pid {pid} with force")
             else:
-                print(f"Stopping imapwatch process with pid {pid}: ", end='', flush=True)
                 os.kill(pid, signal.SIGTERM)
+                print(f"Stopping imapwatch process with pid {pid}: ", end='', flush=True)
                 while pidfile.is_locked():
                     time.sleep(1)
                     print('.',end='',flush=True)
                 print('done!')
         except OSError as e:
             pidfile.break_lock()
-            raise SystemExit(f'Cleaning up stale lockfile')
+            raise SystemExit(f'No running imapwatch process found. Cleaning up stale lockfile')
+
+    def status(args):
+        if not pid:
+            print("No running imapwatch process found")
+        else:
+            print(f"Found running imapwatch process with pid {pid}")
 
     def restart(args):
         stop(args)
@@ -59,11 +116,16 @@ if __name__ == "__main__":
                         action='store', dest='pidfile',
                         default='/tmp/imapwatch.pid',
                         help='Path to PID file, needs full path! - default: /tmp/imapwatch.pid')
-    parser.add_argument('-v', '--verbose',
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-v', '--verbose',
                         action='store', dest='loglevel',
                         choices = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
                         default='INFO',
                         help='Loglevel for the console logger - default: INFO')
+    group.add_argument('-q','--quiet',
+                        action='store_true', dest='quiet',
+                        help='Suppres all the output on the console')
 
     sp = parser.add_subparsers(help='Actions for %(prog)s - default: "start"')
     sp_start = sp.add_parser(
@@ -73,16 +135,34 @@ if __name__ == "__main__":
         'stop',
         description = "Stops %(prog)s if it is currently running",
         help='Stops %(prog)s')
+    sp_status = sp.add_parser(
+        'status',
+        description = "Checks status of %(prog)",
+        help='Status of %(prog)s')
     sp_restart = sp.add_parser(
         'restart',
         description = "Checks if %(prog) is running and tries to restart it",
         help='Restarts %(prog)s')
 
-    sp_stop.set_defaults(func=stop)
     sp_start.set_defaults(func=start)
+    sp_stop.set_defaults(func=stop)
+    sp_status.set_defaults(func=status)
     sp_restart.set_defaults(func=restart)
     
     args = parser.parse_args()
+
+    if args.quiet:
+        sys.stdout = open(os.devnull,'a')
+        sys.stderr = open(os.devnull,'a')
+
+    if args.basedir:
+        # basedir must be a full, absolute path
+        __location__ = os.path.realpath(os.path.join(args.basedir))
+    else:
+        # assume the configfile and log are in the directory of this file
+        __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(os.path.realpath(__file__))))
+
+
     if hasattr(args, 'func'):
         args.func(args)
     else:

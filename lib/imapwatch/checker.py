@@ -49,7 +49,7 @@ class Checker:
 
     def decode_header(self, header):
         h = email.header.decode_header(header.decode())
-        self.logger.debug(f"h: {h}")
+        #self.logger.debug(f"h: {h}")
         #elements = [ i[0].decode(i[1]) if i[1] else i[0] for i in h ]
         elements = []
         for i in h:
@@ -84,8 +84,9 @@ class Checker:
 
     def dispatch(self, items):
         if self.action['action'] == 'things':
-            body = '\n'.join([ f'\u2709\ufe0f {i["from_"]}: "{i["subject"]}"\nmessage:{quote_plus(i["message_id"])}' for i in items ])
             subject = items[0]['subject']
+            items.reverse()
+            body = '\n\n'.join([ f'\u2709\ufe0f {i["from_"]}: "{i["subject"]}"\nmessage:{quote_plus(i["message_id"])}' for i in items ])
        
         # TODO: create this action
         elif self.action['action'] == 'resend':
@@ -106,7 +107,7 @@ class Checker:
                 # also: when stopping a thread, it waits until this loop has finished.
                 # we can set this smaller to quit quicker, but not too small (as we won't have
                 # enought time to catch multiple messages
-                responses = self.server.idle_check(timeout=3)
+                responses = self.server.idle_check(timeout=10)
                 if isinstance(responses, list) and len(responses) > 0:
                     messages = self.check_messages(responses)
                     if messages:
@@ -132,10 +133,15 @@ class Checker:
                 self.connect()
                 self.idle_loop()
         
-        self.server.idle_done()
-        # TODO how should we close the server connection?
-        self.server.logout()
-
+        try:
+            self.server.idle_done()
+            # TODO how should we close the server connection?
+            self.server.logout()
+        except (imapclient.exceptions.IMAPClientError, imapclient.exceptions.IMAPClientAbortError,
+                imaplib.IMAP4.error, imaplib.IMAP4.abort, socket.error, socket.timeout, ssl.SSLError,
+                ssl.SSLEOFError) as exception:
+            self.logger.info(f"Already disconnected")
+ 
     def stop(self):
         self.stop_event.set()
 

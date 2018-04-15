@@ -1,0 +1,19 @@
+[Unit]
+Description=imapwatch
+After=syslog.target
+
+[Service]
+Type=forking
+User=mdbraber
+WorkingDirectory=/home/mdbraber/imapwatch
+ExecStart=/home/mdbraber/imapwatch/imapwatch -d start
+ExecStop=/home/mdbraber/imapwatch/imapwatch -d stop
+StandardOutput=syslog
+StandardError=syslog
+KillMode=process
+Restart=on-failure
+RestartSec=10s
+PIDFile=/tmp/imapwatch.pid
+
+[Install]
+WantedBy=multi-user.target
